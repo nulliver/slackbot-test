@@ -5,17 +5,18 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 )
 
 // You more than likely want your "Bot User OAuth Access Token" which starts with "xoxb-"
-var api = slack.New("xoxb-3203270196-2305069807603-Ufb6LJlNn491qOEivHUm7A1E")
+var api = slack.New(os.Getenv("BOT_TOKEN"))
 
 func main() {
 	fmt.Println("> Enterint main")
-	signingSecret := "c1d71c917786e0d97565ff17c8673bf0"
+	signingSecret := os.Getenv("SLACK_SIGNING")
 
 	http.HandleFunc("/events-endpoint", func(w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(r.Body)
