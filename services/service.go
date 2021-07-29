@@ -1,18 +1,23 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"regexp"
 	"strings"
 	"time"
 
+	"slackbot-test/logger"
 	"slackbot-test/storage"
 
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var api = slack.New(os.Getenv("SLACK_BOT_TOKEN"))
@@ -59,7 +64,25 @@ func processSlackMessage(ev *slackevents.MessageEvent) {
 			}
 			docs = append(docs, doc)
 		}
-		storage.Db.InsertMany(storage.Ctx, docs)
+		fmt.Println(docs)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		dbClient, err := mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGO")))
+		if err != nil {
+			logger.Error(err.Error())
+		}
+		defer func() {
+			if err = dbClient.Disconnect(ctx); err != nil {
+				panic(err)
+			}
+		}()
+
+		res, err := dbClient.Database(storage.DbName).Collection(storage.CollectionName).InsertMany(ctx, docs)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println(res)
 	}
 }
 
