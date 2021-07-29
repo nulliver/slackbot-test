@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"slackbot-test/logger"
 	"slackbot-test/storage"
 
 	"github.com/slack-go/slack"
@@ -40,16 +41,21 @@ func processSlackMessage(ev *slackevents.MessageEvent) {
 		for _, user := range matches {
 			user = strings.TrimPrefix(user, "@")
 			user = strings.TrimSuffix(user, "++")
-			usersWithPlusPlus = append(usersWithPlusPlus, user)
+			userInfo, err := api.GetUserInfo(user)
+			if err != nil {
+				logger.Error(err.Error())
+			}
+			usersWithPlusPlus = append(usersWithPlusPlus, userInfo.Name)
 		}
 		users := strings.Join(usersWithPlusPlus, " ")
 		api.PostMessage(ev.Channel, slack.MsgOptionText("Users with plus-plus: " + users, false))
-
-		storage.SaveTransaction(ev.Username, ev.Text, usersWithPlusPlus)
+		userInfo, err := api.GetUserInfo(ev.User)
+		if err != nil {
+			logger.Error(err.Error())
+		}
+		storage.SaveTransaction(userInfo.Name, ev.Text, usersWithPlusPlus)
 	}
 }
-
-
 
 func handleUrlVerification(w http.ResponseWriter, body []byte) bool {
 	var r *slackevents.ChallengeResponse
