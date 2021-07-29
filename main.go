@@ -12,19 +12,19 @@ import (
 )
 
 // You more than likely want your "Bot User OAuth Access Token" which starts with "xoxb-"
-var api = slack.New(os.Getenv("BOT_TOKEN"))
+var api = slack.New(os.Getenv("SLACK_BOT_TOKEN"))
 
 func main() {
-	fmt.Println("> Enterint main")
-	signingSecret := os.Getenv("SLACK_SIGNING")
+	fmt.Println("> Entering main")
+	signingSecret := os.Getenv("SLACK_SIGNING_SECRET")
 
-	http.HandleFunc("/events-endpoint", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/slack/events", func(w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(r.Body)
-		fmt.Println("- Body read")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+		fmt.Println("- Body read")
 		sv, err := slack.NewSecretsVerifier(r.Header, signingSecret)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
