@@ -1,23 +1,16 @@
 package services
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"regexp"
 	"strings"
-	"time"
 
-	"slackbot-test/logger"
 	"slackbot-test/storage"
 
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var api = slack.New(os.Getenv("SLACK_BOT_TOKEN"))
@@ -52,39 +45,11 @@ func processSlackMessage(ev *slackevents.MessageEvent) {
 		users := strings.Join(usersWithPlusPlus, " ")
 		api.PostMessage(ev.Channel, slack.MsgOptionText("Users with plus-plus: " + users, false))
 
-		var docs []interface{}
-
-		for _, u := range usersWithPlusPlus {
-			doc := bson.D{
-				{Key: "fromUser", Value: ev.User},
-				{Key: "toUser", Value: u},
-				{Key: "message", Value: ev.Message},
-				{Key: "type", Value: "karma"},
-				{Key: "timestamp", Value: time.Now()},
-			}
-			docs = append(docs, doc)
-		}
-		fmt.Println(docs)
-
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		dbClient, err := mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGO")))
-		if err != nil {
-			logger.Error(err.Error())
-		}
-		defer func() {
-			if err = dbClient.Disconnect(ctx); err != nil {
-				panic(err)
-			}
-		}()
-
-		res, err := dbClient.Database(storage.DbName).Collection(storage.CollectionName).InsertMany(ctx, docs)
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Println(res)
+		storage.SaveTransaction(ev.Username, ev.Text, usersWithPlusPlus)
 	}
 }
+
+
 
 func handleUrlVerification(w http.ResponseWriter, body []byte) bool {
 	var r *slackevents.ChallengeResponse

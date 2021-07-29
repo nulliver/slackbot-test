@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -14,8 +15,8 @@ import (
 )
 
 const (
-	DbName         = "nerdcoin"
-	CollectionName = "slack-messages"
+	dbName         = "nerdcoin"
+	collectionName = "slack-messages"
 )
 
 func Setup() {
@@ -39,48 +40,80 @@ func Setup() {
 
 	var dbExists = false
 	for _, db := range dbNames {
-		if strings.Compare(strings.ToLower(db), DbName) == 0 {
+		if strings.Compare(strings.ToLower(db), dbName) == 0 {
 			dbExists = true
-			logger.Info(DbName + " database exists", )
+			logger.Info(dbName + " database exists", )
 			break
 		}
 	}
 
 	if !dbExists {
-		logger.Info(DbName + " database does not exists. Creating database...", )
-		err := dbClient.Database(DbName).CreateCollection(ctx, CollectionName)
+		logger.Info(dbName + " database does not exists. Creating database...", )
+		err := dbClient.Database(dbName).CreateCollection(ctx, collectionName)
 		if err != nil {
 			logger.Error(err.Error())
 			return
 		}
-		logger.Info(DbName + " database with " + CollectionName + " collection created successfully.")
+		logger.Info(dbName + " database with " + collectionName + " collection created successfully.")
 	} else {
 		var collectionExists = false
-		collectionNames, err := dbClient.Database(DbName).ListCollectionNames(ctx, bson.D{})
+		collectionNames, err := dbClient.Database(dbName).ListCollectionNames(ctx, bson.D{})
 		if err != nil {
 			logger.Error(err.Error())
 			return
 		}
 		for _, collection := range collectionNames {
-			if strings.Compare(strings.ToLower(collection), CollectionName) == 0 {
+			if strings.Compare(strings.ToLower(collection), collectionName) == 0 {
 				collectionExists = true
-				logger.Info(CollectionName + " collection exists")
+				logger.Info(collectionName + " collection exists")
 				break
 			}
 		}
 		if !collectionExists {
-			logger.Info(CollectionName + " collection does not exists. Creating collection...")
-			err := dbClient.Database(DbName).CreateCollection(ctx, CollectionName)
+			logger.Info(collectionName + " collection does not exists. Creating collection...")
+			err := dbClient.Database(dbName).CreateCollection(ctx, collectionName)
 			if err != nil {
 				logger.Error(err.Error())
 				return
 			}
-			logger.Info(CollectionName + " collection created successfully")
+			logger.Info(collectionName + " collection created successfully")
 		}
 
-		collection := dbClient.Database(DbName).Collection(CollectionName)
+		collection := dbClient.Database(dbName).Collection(collectionName)
 		count, err := collection.CountDocuments(ctx, bson.D{})
 		logger.Info("This many documents: " + string(count))
 	}
 }
 
+func SaveTransaction(username, message string, usersWithPlusPlus []string) {
+	var docs []interface{}
+
+	for _, u := range usersWithPlusPlus {
+		doc := bson.D{
+			{Key: "fromUser", Value: username},
+			{Key: "toUser", Value: u},
+			{Key: "message", Value: message},
+			{Key: "type", Value: "karma"},
+			{Key: "timestamp", Value: time.Now()},
+		}
+		docs = append(docs, doc)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	dbClient, err := mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGO")))
+	if err != nil {
+		logger.Error(err.Error())
+	}
+	defer func() {
+		if err = dbClient.Disconnect(ctx); err != nil {
+			panic(err)
+		}
+	}()
+
+	res, err := dbClient.Database(dbName).Collection(collectionName).InsertMany(ctx, docs)
+	if err != nil {
+		logger.Error(err.Error())
+	}
+	fmt.Println(res)
+}
