@@ -1,14 +1,20 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
 	"slackbot-test/controllers"
+	"slackbot-test/logger"
+	"slackbot-test/storage"
 )
 
 func main() {
+
+
 	http.HandleFunc("/slack/events", controllers.ProcessEvent)
-	fmt.Println("[INFO] Server listening")
+
+	storage.Setup()
+
+	logger.Info("Nerdcoin bot started")
 	http.ListenAndServe(":3000", nil)
 }
