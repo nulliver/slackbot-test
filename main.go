@@ -61,8 +61,8 @@ func main() {
 		if eventsAPIEvent.Type == slackevents.CallbackEvent {
 			innerEvent := eventsAPIEvent.InnerEvent
 			switch ev := innerEvent.Data.(type) {
-			case *slackevents.AppMentionEvent:
-				api.PostMessage(ev.Channel, slack.MsgOptionText("Yes, hello.", false))
+			case *slackevents.MessageEvent:
+				api.PostMessage(ev.Channel, slack.MsgOptionText("Echo: " + ev.Text, false))
 			}
 		}
 	})
