@@ -3,41 +3,43 @@ package controllers
 import (
 	"encoding/json"
 	"io/ioutil"
-	"net/http"
 	"os"
 
 	"slackbot-test/services"
 
+	"github.com/gin-gonic/gin"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 )
 
-func ProcessEvent(w http.ResponseWriter, r *http.Request) {
-	body, err := ioutil.ReadAll(r.Body)
+func ProcessEvents(gctx *gin.Context) {
+	body, err := ioutil.ReadAll(gctx.Request.Body)
+	if err != nil {
+		gctx.Error(err)
+		return
+	}
 
+	sv, err := slack.NewSecretsVerifier(gctx.Request.Header, os.Getenv("SLACK_SIGNING_SECRET"))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		gctx.Error(err)
 		return
 	}
-	sv, err := slack.NewSecretsVerifier(r.Header, os.Getenv("SLACK_SIGNING_SECRET"))
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+
 	if _, err := sv.Write(body); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		gctx.Error(err)
 		return
 	}
 	if err := sv.Ensure(); err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
+		gctx.Error(err)
 		return
 	}
 
 	eventsAPIEvent, err := slackevents.ParseEvent(json.RawMessage(body), slackevents.OptionNoVerifyToken())
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		gctx.Error(err)
 		return
 	}
-	services.HandleEvent(w, eventsAPIEvent, body)
+
+	services.HandleEvent(gctx, eventsAPIEvent, body)
 }
 

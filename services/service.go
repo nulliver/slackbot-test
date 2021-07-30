@@ -2,24 +2,25 @@ package services
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"regexp"
 	"strings"
 
-	"slackbot-test/logger"
 	"slackbot-test/storage"
 
+	"github.com/gin-gonic/gin"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 )
 
 var api = slack.New(os.Getenv("SLACK_BOT_TOKEN"))
 
-func HandleEvent(w http.ResponseWriter, eventsAPIEvent slackevents.EventsAPIEvent, body []byte) {
+func HandleEvent(gctx *gin.Context, eventsAPIEvent slackevents.EventsAPIEvent, body []byte) {
 	switch eventsAPIEvent.Type {
 	case slackevents.URLVerification:
-		handleUrlVerification(w, body)
+		handleUrlVerification(gctx, body)
 	case slackevents.CallbackEvent:
 		innerEvent := eventsAPIEvent.InnerEvent
 		switch ev := innerEvent.Data.(type) {
@@ -35,39 +36,39 @@ func processSlackMessage(ev *slackevents.MessageEvent) {
 	if strings.Contains(ev.Text, "++") {
 
 		var usersWithPlusPlus []string
-
 		plusPlusRegex := regexp.MustCompile(`@[^\s@+]*?\+{2}`)
 		matches := plusPlusRegex.FindAllString(ev.Text, -1)
 		for _, userId := range matches {
-			// logger.Info("userId (before trim): " + userId)
+			log.Print("userId (before trim): " + userId)
 			userId = strings.TrimPrefix(userId, "@")
 			userId = strings.TrimSuffix(userId, ">++")
-			// logger.Info("userId (after trim): " + userId)
+			log.Print("userId (after trim): " + userId)
 			userInfo, err := api.GetUserInfo(userId)
 			if err != nil {
-				logger.Error(err.Error())
+				log.Print(err)
 				continue
 			}
 			usersWithPlusPlus = append(usersWithPlusPlus, userInfo.Name)
 		}
 		api.PostMessage(ev.Channel, slack.MsgOptionText("Coins :moneybag: for: " + strings.Join(usersWithPlusPlus, ", "), false))
-		// logger.Info("ev.User: " + ev.User)
+		log.Printf("ev.User: %s", ev.User)
 		userInfo, err := api.GetUserInfo(ev.User)
 		if err != nil {
-			logger.Error(err.Error())
+			log.Print(err)
 		}
+
 		storage.SaveTransaction(userInfo.Name, ev.Text, usersWithPlusPlus)
 	}
 }
 
-func handleUrlVerification(w http.ResponseWriter, body []byte) bool {
+func handleUrlVerification(gctx *gin.Context, body []byte) {
 	var r *slackevents.ChallengeResponse
 	err := json.Unmarshal([]byte(body), &r)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return true
+		gctx.Error(err)
+		return
 	}
-	w.Header().Set("Content-Type", "text")
-	w.Write([]byte(r.Challenge))
-	return false
+	gctx.JSON(http.StatusOK, gin.H{"challenge": r.Challenge})
+	/*w.Header().Set("Content-Type", "text")
+	w.Write([]byte(r.Challenge))*/
 }

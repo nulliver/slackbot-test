@@ -3,11 +3,10 @@ package storage
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
-
-	"slackbot-test/logger"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -24,7 +23,7 @@ func Setup() {
 	defer cancel()
 	dbClient, err := mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGO")))
 	if err != nil {
-		logger.Error(err.Error())
+		log.Print(err)
 	}
 	defer func() {
 		if err = dbClient.Disconnect(ctx); err != nil {
@@ -34,7 +33,7 @@ func Setup() {
 
 	dbNames, err := dbClient.ListDatabaseNames(ctx, bson.D{})
 	if err != nil {
-		logger.Error(err.Error())
+		log.Print(err)
 		return
 	}
 
@@ -42,46 +41,42 @@ func Setup() {
 	for _, db := range dbNames {
 		if strings.Compare(strings.ToLower(db), dbName) == 0 {
 			dbExists = true
-			logger.Info(dbName + " database exists", )
+			log.Printf("'%s' database exists", dbName)
 			break
 		}
 	}
 
 	if !dbExists {
-		logger.Info(dbName + " database does not exists. Creating database...", )
+		log.Printf( "'%s' database does not exists. Creating database...", dbName)
 		err := dbClient.Database(dbName).CreateCollection(ctx, collectionName)
 		if err != nil {
-			logger.Error(err.Error())
+			log.Print(err)
 			return
 		}
-		logger.Info(dbName + " database with " + collectionName + " collection created successfully.")
+		log.Printf( "'%s' database with '%s' collection created successfully", dbName, collectionName)
 	} else {
 		var collectionExists = false
 		collectionNames, err := dbClient.Database(dbName).ListCollectionNames(ctx, bson.D{})
 		if err != nil {
-			logger.Error(err.Error())
+			log.Print(err)
 			return
 		}
 		for _, collection := range collectionNames {
 			if strings.Compare(strings.ToLower(collection), collectionName) == 0 {
 				collectionExists = true
-				logger.Info(collectionName + " collection exists")
+				log.Printf( "'%s' collection exists", collectionName)
 				break
 			}
 		}
 		if !collectionExists {
-			logger.Info(collectionName + " collection does not exists. Creating collection...")
+			log.Printf(  "'%s' collection does not exists. Creating collection...", collectionName)
 			err := dbClient.Database(dbName).CreateCollection(ctx, collectionName)
 			if err != nil {
-				logger.Error(err.Error())
+				log.Print(err)
 				return
 			}
-			logger.Info(collectionName + " collection created successfully")
+			log.Printf("'%s' collection created successfully", collectionName)
 		}
-
-		collection := dbClient.Database(dbName).Collection(collectionName)
-		count, err := collection.CountDocuments(ctx, bson.D{})
-		logger.Info("This many documents: " + string(count))
 	}
 }
 
@@ -103,7 +98,7 @@ func SaveTransaction(username, message string, usersWithPlusPlus []string) {
 	defer cancel()
 	dbClient, err := mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGO")))
 	if err != nil {
-		logger.Error(err.Error())
+		log.Printf(err.Error())
 	}
 	defer func() {
 		if err = dbClient.Disconnect(ctx); err != nil {
@@ -113,7 +108,7 @@ func SaveTransaction(username, message string, usersWithPlusPlus []string) {
 
 	res, err := dbClient.Database(dbName).Collection(collectionName).InsertMany(ctx, docs)
 	if err != nil {
-		logger.Error(err.Error())
+		log.Printf(err.Error())
 	}
 	fmt.Println(res)
 }

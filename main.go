@@ -1,20 +1,32 @@
 package main
 
 import (
+	"log"
 	"net/http"
+	"os"
 
-	"slackbot-test/controllers"
-	"slackbot-test/logger"
 	"slackbot-test/storage"
+
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
 
+	port := os.Getenv("NRDPORT")
+	if port == "" {
+		log.Fatal("NRDPORT must be set")
+	}
 
-	http.HandleFunc("/slack/events", controllers.ProcessEvent)
+	router := gin.Default()
+	router.LoadHTMLGlob("templates/*")
+
+	router.GET("/", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index.tmpl", gin.H{"title": "Nerdcoin Bot", "message": "Nerdcoin Bot is up and running"})
+
+	})
+	// router.POST("/slack/events", controllers.ProcessEvents)
 
 	storage.Setup()
 
-	logger.Info("Nerdcoin bot started")
-	http.ListenAndServe(":3000", nil)
+	router.Run(":" + port)
 }
