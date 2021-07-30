@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"os"
 
 	"slackbot-test/services"
@@ -15,28 +16,28 @@ import (
 func ProcessEvents(gctx *gin.Context) {
 	body, err := ioutil.ReadAll(gctx.Request.Body)
 	if err != nil {
-		gctx.Error(err)
+		log.Print(err)
 		return
 	}
 
 	sv, err := slack.NewSecretsVerifier(gctx.Request.Header, os.Getenv("SLACK_SIGNING_SECRET"))
 	if err != nil {
-		gctx.Error(err)
+		log.Print(err)
 		return
 	}
 
 	if _, err := sv.Write(body); err != nil {
-		gctx.Error(err)
+		log.Print(err)
 		return
 	}
 	if err := sv.Ensure(); err != nil {
-		gctx.Error(err)
+		log.Print(err)
 		return
 	}
 
 	eventsAPIEvent, err := slackevents.ParseEvent(json.RawMessage(body), slackevents.OptionNoVerifyToken())
 	if err != nil {
-		gctx.Error(err)
+		log.Print(err)
 		return
 	}
 
