@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"slackbot-test/controllers"
 	"slackbot-test/storage"
 
 	"github.com/gin-gonic/gin"
@@ -24,7 +25,7 @@ func main() {
 		c.HTML(http.StatusOK, "index.tmpl", gin.H{"title": "Nerdcoin Bot", "message": "Nerdcoin Bot is up and running"})
 
 	})
-	// router.POST("/slack/events", controllers.ProcessEvents)
+	router.POST("/slack/events", controllers.ProcessEvents)
 
 	storage.Setup()
 
