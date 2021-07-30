@@ -39,10 +39,10 @@ func processSlackMessage(ev *slackevents.MessageEvent) {
 		plusPlusRegex := regexp.MustCompile(`@[^\s@+]*?\+{2}`)
 		matches := plusPlusRegex.FindAllString(ev.Text, -1)
 		for _, userId := range matches {
-			log.Print("userId (before trim): " + userId)
+			// log.Print("userId (before trim): " + userId)
 			userId = strings.TrimPrefix(userId, "@")
 			userId = strings.TrimSuffix(userId, ">++")
-			log.Print("userId (after trim): " + userId)
+			// log.Print("userId (after trim): " + userId)
 			userInfo, err := api.GetUserInfo(userId)
 			if err != nil {
 				log.Print(err)
@@ -50,8 +50,12 @@ func processSlackMessage(ev *slackevents.MessageEvent) {
 			}
 			usersWithPlusPlus = append(usersWithPlusPlus, userInfo.Name)
 		}
-		api.PostMessage(ev.Channel, slack.MsgOptionText("Coins :nerdcoin: for: " + strings.Join(usersWithPlusPlus, ", "), false), slack.MsgOptionTS(ev.Message.TimeStamp))
-		log.Printf("ev.User: %s", ev.User)
+
+		// log.Printf("Timestamp: %s", ev.TimeStamp)
+		api.PostMessage(ev.Channel,
+			slack.MsgOptionText("Coins :nerdcoin: for: " + strings.Join(usersWithPlusPlus, ", "), false),
+			slack.MsgOptionTS(ev.TimeStamp))
+		// log.Printf("ev.User: %s", ev.User)
 		userInfo, err := api.GetUserInfo(ev.User)
 		if err != nil {
 			log.Print(err)
