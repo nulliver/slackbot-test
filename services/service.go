@@ -50,7 +50,7 @@ func processSlackMessage(ev *slackevents.MessageEvent) {
 			}
 			usersWithPlusPlus = append(usersWithPlusPlus, userInfo.Name)
 		}
-		api.PostMessage(ev.Channel, slack.MsgOptionText("Coins for: " + strings.Join(usersWithPlusPlus, " "), false))
+		api.PostMessage(ev.Channel, slack.MsgOptionText("Coins :moneybag: for: " + strings.Join(usersWithPlusPlus, ", "), false))
 		// logger.Info("ev.User: " + ev.User)
 		userInfo, err := api.GetUserInfo(ev.User)
 		if err != nil {
